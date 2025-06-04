@@ -7,8 +7,8 @@ use console_engine::ConsoleEngine;
 pub struct Pumpkin{
     pub growth_stage: u8,
     pub water_lvl: i32,
-    x: i32,
-    y:i32,  
+    pub x: i32,
+    pub y:i32,  
 }
 impl Pumpkin{
     pub fn new(x:i32, y:i32) -> Self{
@@ -39,13 +39,13 @@ impl Pumpkin{
 
         // Dark brown water base (draw first, behind the plant)
         if water_radius > 0 {
-            let water_color = pixel::pxl_bg(' ', Color::AnsiValue(94)); // Dark brown
+            let water_color = pixel::pxl_bg(' ', Color::AnsiValue(235)); // Dark brown
             engine.fill_circle(self.x, self.y, water_radius, water_color);
         }
         let color = match self.growth_stage {
-            0..=29 => pixel::pxl_fg('.', Color::AnsiValue(28)), // small green dot
-            30..=59 => pixel::pxl_fg('o', Color::AnsiValue(166)), // orange circle
-            _ => pixel::pxl_fg('O', Color::AnsiValue(166)),       // large orange
+            0..=29 => pixel::pxl_fbg('o', Color::AnsiValue(28), Color::AnsiValue(94)), // small green dot
+            30..=59 => pixel::pxl_fg('O', Color::AnsiValue(166)), // orange circle
+            _ => pixel::pxl_fg('@', Color::AnsiValue(166)),       // large orange
         };
 
         let radius = match self.growth_stage {
@@ -63,14 +63,35 @@ impl Pumpkin{
     pub fn water(&mut self, amount: i32) {
         self.water_lvl = ((self.water_lvl + amount) % 51) + 1;
     }
+    pub fn draw_at(&self, engine: &mut ConsoleEngine, x: i32, y: i32) {
+    let color = match self.growth_stage {
+        0..=29 => pixel::pxl_fg('.', Color::AnsiValue(28)),
+        30..=59 => pixel::pxl_fg('o', Color::AnsiValue(166)),
+        _ => pixel::pxl_fg('O', Color::AnsiValue(166)),
+    };
+
+    let radius = match self.growth_stage {
+        0..=29 => 0,
+        30..=59 => 1,
+        _ => 2,
+    };
+
+    if radius == 0 {
+        engine.set_pxl(x, y, color);
+    } else {
+        engine.fill_circle(x, y, radius, color);
+    }
+
+    // Optional: You could also draw the water shadow here.
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Melon{
-    pub growth_stage: u8,
+    pub growth_stage: u32,
     pub water_lvl: i32,
-    x: i32,
-    y:i32,  
+    pub x: i32,
+    pub y:i32,  
 }
 impl Melon{
     pub fn new(x:i32, y:i32) -> Self{
@@ -78,7 +99,7 @@ impl Melon{
     }
     pub fn grow(&mut self){
         let mut rng = rand::rng();
-        if rng.random_bool((self.water_lvl) as f64/100.0){
+        if rng.random_bool((self.water_lvl.min(1)) as f64/100.0){
             self.growth_stage += 1;
         }
         if self.water_lvl > 1 && rng.random_bool(0.01){
@@ -100,7 +121,7 @@ impl Melon{
 
         // Dark brown water base (draw first, behind the plant)
         if water_radius > 0 {
-            let water_color = pixel::pxl_bg(' ', Color::AnsiValue(94)); // Dark brown
+            let water_color = pixel::pxl_bg(' ', Color::AnsiValue(235)); // Dark brown
             engine.fill_circle(self.x, self.y, water_radius, water_color);
         }
         let color = match self.growth_stage {
@@ -123,5 +144,49 @@ impl Melon{
     }
     pub fn water(&mut self, amount: i32) {
         self.water_lvl = ((self.water_lvl + amount) % 51) + 1;
+    }
+    pub fn draw_at(&self, engine: &mut ConsoleEngine, x: i32, y: i32) {
+    let color = match self.growth_stage {
+        0..=29 => pixel::pxl_fg('.', Color::AnsiValue(28)),
+        30..=59 => pixel::pxl_fg('o', Color::AnsiValue(166)),
+        _ => pixel::pxl_fg('O', Color::AnsiValue(166)),
+    };
+
+    let radius = match self.growth_stage {
+        0..=29 => 0,
+        30..=59 => 1,
+        _ => 2,
+    };
+
+    if radius == 0 {
+        engine.set_pxl(x, y, color);
+    } else {
+        engine.fill_circle(x, y, radius, color);
+    }
+
+    // Optional: You could also draw the water shadow here.
+}
+}
+
+pub struct Puddle {
+    pub x: i32,
+    pub y: i32,
+    pub radius: i32,
+}
+
+impl Puddle {
+    pub fn new(x: i32, y: i32) -> Self {
+        Puddle { x, y, radius: 2 }
+    }
+
+    pub fn draw(&self, engine: &mut ConsoleEngine) {
+        let water_color = pixel::pxl_fg('~', Color::AnsiValue(33)); // Light blue
+        engine.fill_circle(self.x, self.y, self.radius.try_into().unwrap(), water_color);
+    }
+
+    pub fn contains_coords(&self, x: i32, y: i32) -> bool {
+        let dx = x - self.x;
+        let dy = y - self.y;
+        dx * dx + dy * dy <= self.radius * self.radius
     }
 }

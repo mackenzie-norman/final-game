@@ -12,7 +12,7 @@ use crate::dialouge::{Dialouge, pt_in_box};
 use crate::{character, pumpkin};
 use character::Character;
 use crate::debug_engine;
-use crate::pumpkin::{Pumpkin, Melon};
+use crate::pumpkin::{Melon, Puddle, Pumpkin};
 use crate::game::HandOptions::{Clicker,Water, PumpkinSeeds, MelonSeeds};
 use crate::scenes::{draw_mountains};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -30,36 +30,93 @@ pub struct Game{
     p_seeds : u32,
     m_seeds : u32,
     in_hand: HandOptions,
-    topview : bool
+    topview : bool,
+    water : i32,
+    pub puddles : Vec<Puddle>
 }
 impl Game{
     pub fn new() -> Self{
-        return  Game{hunger :100, pumpkins: vec![], melons : vec![], in_hand: Clicker, p_seeds:10, m_seeds:2, topview:true};
+        
+        return  Game{hunger :100, pumpkins: vec![], melons : vec![], in_hand: Clicker, p_seeds:10, m_seeds:2, topview:true, water : 4, puddles: vec![]};
+    }
+    pub fn run(&mut self, engine: &mut ConsoleEngine){
+        if self.topview{
+            self.menu(engine);
+        }else{
+            self.draw_landscape(engine,0);
+        }
     }
     pub fn menu(&mut self, engine: &mut ConsoleEngine) {
     let screen_height = engine.get_height() as i32;
+    
     let box_size = screen_height / 8;
 
     let mut menu_bounds = Vec::new();
 
     for i in 0..5 {
-        let y1 = 1 + (i * box_size);
-        let y2 = y1 + box_size;
-        let x1 = 1;
-        let x2 = x1 + box_size;
+    let y1 = 1 + (i * box_size);
+    let y2 = y1 + box_size -1;
+    let x1 = 1;
+    let x2 = x1 + box_size;
 
-        engine.rect_border(x1, y1, x2, y2, BorderStyle::new_simple());
+    // Highlight active box
+    let border_style = if match i {
+        0 => self.in_hand == HandOptions::Clicker,
+        1 => self.in_hand == HandOptions::Water,
+        2 => self.in_hand == HandOptions::PumpkinSeeds,
+        3 => self.in_hand == HandOptions::MelonSeeds,
+        _ => false,
+    } {
+        BorderStyle::new_simple().with_colors(Color::Green, Color::Black)
+    } else {
+        BorderStyle::new_simple()
+    };
 
-        // Draw seed counts for PumpkinSeeds (2) and MelonSeeds (3)
-        match i {
-            2 => {
-                engine.print(x1 +1 , y2 - 1, &format!("Seeds: {}", self.p_seeds));
-            }
-            3 => {
-                engine.print(x1+1, y2 - 1, &format!("Seeds: {}", self.m_seeds));
-            }
-            _ => {}
+    engine.rect_border(x1, y1, x2, y2, border_style);
+
+    // Content based on box index
+    match i {
+        0 => {
+            // Clicker icon
+            let handle = pixel::pxl_fg('+', Color::AnsiValue(130));
+            let blade = pixel::pxl_fg('#', Color::AnsiValue(240));
+            engine.line(x1 + 1, y2 - 1, x2 - 1, box_size / 2, handle);
+            engine.line(x2 - 1, box_size / 2, x1 + 2, y1 + 2, blade);
         }
+        1 => {
+            // Water icon
+            let water_color = pixel::pxl_fg('~', Color::AnsiValue(33));
+            for j in 0..self.water.min(6) {
+                engine.line(x1 + 1, y2 - 1 - j, x2 - 1, y2 - 1 - j, water_color);
+            }
+            engine.print_fbg(x1 + 1, y2 - 1, "Water", Color::AnsiValue(33), Color::Black);
+        }
+        2 => {
+            // Pumpkin seeds + icon
+            let pumpkin_color = pixel::pxl_bg(' ', Color::AnsiValue(166));  // orange
+            let stem_color = pixel::pxl_fbg('*', Color::AnsiValue(22), Color::AnsiValue(166));      // dark green
+            let cx = (x1 + x2) / 2;
+            let cy = (y1 + y2) / 2;
+
+            engine.fill_circle(cx, cy, 2, pumpkin_color); // pumpkin body
+            engine.set_pxl(cx, cy , stem_color); // stem
+            
+            engine.print(x1 + 1, y2 - 1, &format!("Seeds: {}", self.p_seeds));
+        }
+        3 => {
+            // Melon seeds + icon
+            let pumpkin_color = pixel::pxl_bg(' ', Color::AnsiValue(34));  // orange
+            let stem_color = pixel::pxl_fbg('*', Color::AnsiValue(22), Color::AnsiValue(34));      // dark green
+            let cx = (x1 + x2) / 2;
+            let cy = (y1 + y2) / 2;
+
+            engine.fill_circle(cx, cy, 2, pumpkin_color); // pumpkin body
+            engine.set_pxl(cx, cy , stem_color); // stem
+            
+            engine.print(x1 + 1, y2 - 1, &format!("Seeds: {}", self.m_seeds));
+        }
+        _ => {}
+    }
 
         menu_bounds.push((x1, x2, y1, y2));
     }
@@ -78,7 +135,7 @@ impl Game{
                     1 => HandOptions::Water,
                     2 => HandOptions::PumpkinSeeds,
                     3 => HandOptions::MelonSeeds,
-                    _ => HandOptions::Clicker,
+                    _ => {self.topview = false;  HandOptions::Clicker},
                 };
                 clicked_menu = true;
                 break;
@@ -91,6 +148,7 @@ impl Game{
             self.try_harvest(mx, my);
         }
     }
+     
     for pumpkin in &mut self.pumpkins {
         pumpkin.draw(engine);
         pumpkin.grow();
@@ -100,6 +158,9 @@ impl Game{
         melon.draw(engine);
         melon.grow();
 
+    }
+    for puddle in &mut self.puddles {
+        puddle.draw(engine);
     }
     }
     pub fn is_tile_occupied(&self, x: i32, y: i32) -> bool {
@@ -132,15 +193,25 @@ impl Game{
     }
 
     for pumpkin in &mut self.pumpkins {
+        if self.water <= 0{break;}
         if pumpkin.contains_coords(x, y) {
             pumpkin.water(20);
+            self.water -= 1;
             return;
         }
     }
 
     for melon in &mut self.melons {
+        if self.water <= 0{break;}
         if melon.contains_coords(x, y) {
             melon.water(20);
+            self.water -= 1;
+            return;
+        }
+    }
+    for puddle in &mut self.puddles {
+        if puddle.contains_coords(x, y){
+            self.water = 6;
             return;
         }
     }
@@ -171,9 +242,61 @@ pub fn try_harvest(&mut self, x: i32, y: i32) {
     }
 }
 
-pub fn draw_landscape(engine: &mut ConsoleEngine, land_y1:i32){
+pub fn draw_landscape(&mut self, engine: &mut ConsoleEngine, land_y1:i32){
 
+    draw_mountains(engine, 0, true, &vec![]);
+    let screen_width = engine.get_width() as i32;
+    let screen_height = engine.get_height() as i32;
 
+    // Arrow sizing relative to screen
+    let arrow_width = screen_width / 20; // ~10% of screen width
+    let arrow_height = screen_height / 10; // ~10% of screen height
+
+    // Arrow position (top-left corner)
+    let ax = 1;
+    let ay = arrow_height/2 + 1 ;
+
+    let bx = arrow_width;
+    let by = 1;
+
+    let cx = arrow_width;
+    let cy = arrow_height;
+
+    let arrow_color = pixel::pxl_bg(' ', Color::AnsiValue(82)); // greenish
+
+    // Draw the triangle arrow
+    engine.fill_triangle(ax, ay, bx, by, cx, cy, arrow_color);
+    engine.fill_rect(arrow_width, arrow_height - 2, arrow_width * 2 , 3, arrow_color);
+
+    // Bounding box for click detection
+    let min_x = bx.min(cx).min(ax);
+    let max_x = bx.max(cx).max(ax);
+    let min_y = ay.min(by).min(cy);
+    let max_y = ay.max(by).max(cy);
+
+    if let Some((mx, my)) = engine.get_mouse_press(MouseButton::Left) {
+        let mx = mx as i32;
+        let my = my as i32;
+
+        if mx >= min_x && mx <= max_x && my >= min_y && my <= max_y {
+            self.topview = true;
+        }
+    }
+    //loop through and draw pumpkins and melons from screen height to soil line using draw_at function and converting their y value to within the range
+    let soil_line = screen_height / 2 + screen_height/4;
+     // Convert world Y (0–100) to screen Y
+    let map_y = |y: i32| -> i32 {
+        let y_clamped = y.clamp(0, 100);
+        ground_bottom - ((y_clamped * (ground_bottom - soil_line)) / 100)
+    };
+
+    for pumpkin in &self.pumpkins {
+        pumpkin.draw_at(engine, map_y(pumpkin.y));
+    }
+
+    for melon in &self.melons {
+        melon.draw_at(engine, map_y(melon.y));
+    }
 }
 
 
