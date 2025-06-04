@@ -1,6 +1,7 @@
 use std::fmt::format;
 use std::io;
 use std::sync::mpsc::RecvTimeoutError;
+use rand::{random, Rng, rngs::StdRng, SeedableRng};
 use console_engine::pixel::{self, Pixel};
 use console_engine::rect_style::BorderStyle;
 use console_engine::{screen, Color, MouseButton};
@@ -8,17 +9,175 @@ use console_engine::ConsoleEngine;
 use console_engine::KeyCode;
 use figlet_rs::FIGfont;
 use crate::dialouge::{Dialouge, pt_in_box};
-use crate::character;
+use crate::{character, pumpkin};
 use character::Character;
 use crate::debug_engine;
+use crate::pumpkin::{Pumpkin, Melon};
+use crate::game::HandOptions::{Clicker,Water, PumpkinSeeds, MelonSeeds};
+use crate::scenes::{draw_mountains};
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 
+pub enum HandOptions {
+    Clicker,
+    Water,
+    PumpkinSeeds,
+    MelonSeeds,
+}
 pub struct Game{
-    player_name : String
+    hunger  : u32,
+    pumpkins : Vec<Pumpkin>,
+    melons : Vec<Melon>,
+    p_seeds : u32,
+    m_seeds : u32,
+    in_hand: HandOptions,
+    topview : bool
 }
 impl Game{
-    pub fn new(name: String) -> Self{
-        return  Game{player_name:name};
+    pub fn new() -> Self{
+        return  Game{hunger :100, pumpkins: vec![], melons : vec![], in_hand: Clicker, p_seeds:10, m_seeds:2, topview:true};
     }
+    pub fn menu(&mut self, engine: &mut ConsoleEngine) {
+    let screen_height = engine.get_height() as i32;
+    let box_size = screen_height / 8;
+
+    let mut menu_bounds = Vec::new();
+
+    for i in 0..5 {
+        let y1 = 1 + (i * box_size);
+        let y2 = y1 + box_size;
+        let x1 = 1;
+        let x2 = x1 + box_size;
+
+        engine.rect_border(x1, y1, x2, y2, BorderStyle::new_simple());
+
+        // Draw seed counts for PumpkinSeeds (2) and MelonSeeds (3)
+        match i {
+            2 => {
+                engine.print(x1 +1 , y2 - 1, &format!("Seeds: {}", self.p_seeds));
+            }
+            3 => {
+                engine.print(x1+1, y2 - 1, &format!("Seeds: {}", self.m_seeds));
+            }
+            _ => {}
+        }
+
+        menu_bounds.push((x1, x2, y1, y2));
+    }
+
+    if let Some((mx, my)) = engine.get_mouse_press(MouseButton::Left) {
+        let mx = mx as i32;
+        let my = my as i32;
+
+        let mut clicked_menu = false;
+
+        for (i, (x1, x2, y1, y2)) in menu_bounds.iter().enumerate() {
+            if mx >= *x1 && mx <= *x2 && my >= *y1 && my <= *y2 {
+                if i  == 0 {self.topview = !self.topview};
+                self.in_hand = match i {
+                    0 => HandOptions::Clicker,
+                    1 => HandOptions::Water,
+                    2 => HandOptions::PumpkinSeeds,
+                    3 => HandOptions::MelonSeeds,
+                    _ => HandOptions::Clicker,
+                };
+                clicked_menu = true;
+                break;
+            }
+        }
+
+        if !clicked_menu {
+            self.try_plant(mx, my);
+            self.try_water(mx, my);
+            self.try_harvest(mx, my);
+        }
+    }
+    for pumpkin in &mut self.pumpkins {
+        pumpkin.draw(engine);
+        pumpkin.grow();
+    }
+
+    for melon in &mut self.melons {
+        melon.draw(engine);
+        melon.grow();
+
+    }
+    }
+    pub fn is_tile_occupied(&self, x: i32, y: i32) -> bool {
+        self.pumpkins.iter().any(|p| p.contains_coords(x, y)) ||
+        self.melons.iter().any(|m| m.contains_coords(x, y))
+    }   
+    pub fn try_plant(&mut self, x: i32, y: i32) {
+        if self.is_tile_occupied(x, y) {
+            return;
+        }
+        match self.in_hand {
+            HandOptions::PumpkinSeeds => {
+                if self.p_seeds > 0 {
+                    self.pumpkins.push(Pumpkin::new(x, y));
+                    self.p_seeds -= 1;
+                }
+            }
+            HandOptions::MelonSeeds => {
+                if self.m_seeds > 0 {
+                    self.melons.push(Melon::new(x, y));
+                    self.m_seeds -= 1;
+                }
+            }
+            _ => {} // Clicker and Water do nothing
+        }
+    }
+    pub fn try_water(&mut self, x: i32, y: i32) {
+    if self.in_hand != HandOptions::Water {
+        return;
+    }
+
+    for pumpkin in &mut self.pumpkins {
+        if pumpkin.contains_coords(x, y) {
+            pumpkin.water(20);
+            return;
+        }
+    }
+
+    for melon in &mut self.melons {
+        if melon.contains_coords(x, y) {
+            melon.water(20);
+            return;
+        }
+    }
+}
+
+pub fn try_harvest(&mut self, x: i32, y: i32) {
+    if self.in_hand != HandOptions::Clicker {
+        return;
+    }
+    
+    if let Some(index) = self.pumpkins.iter().position(|p| p.contains_coords(x, y) && p.growth_stage >= 60) {
+        let mut rng = rand::rng();
+        let seeds_gained = rng.random_range(1..=3);
+        self.p_seeds += seeds_gained;
+        self.pumpkins.remove(index);
+        
+        self.hunger = self.hunger  + 20;
+        return;
+    }
+
+    if let Some(index) = self.melons.iter().position(|m| m.contains_coords(x, y) && m.growth_stage >= 60) { 
+        let mut rng = rand::rng();
+        let seeds_gained = rng.random_range(1..=3);
+        self.m_seeds += seeds_gained;
+        self.melons.remove(index);
+        self.hunger = self.hunger  + 20;
+        return;
+    }
+}
+
+pub fn draw_landscape(engine: &mut ConsoleEngine, land_y1:i32){
+
+
+}
+
+
+    
 }
 fn top_down_tracks(engine: &mut ConsoleEngine, frame:i32 , x1:i32, y1: i32, x2: i32, y2:i32){
     let rail_char = pixel::pxl_fg('#', Color::AnsiValue(242));
@@ -103,96 +262,4 @@ fn get_text(engine: &mut ConsoleEngine, ) -> Option<char>{
         return Some(' ');
     }
     return None; 
-}
-pub fn ticket_screen(engine: &mut ConsoleEngine, frame:i32) -> Game{
-    let screen_width: i32 =(engine.get_width()) as i32;
-    let screen_height: i32 =(engine.get_height()) as i32;
-    let  padding_x = screen_width/24;
-    let padding_y = screen_height /4;
-    let mut first_name = "".to_string();
-    let mut frame = frame;
-    let mut in_diag = true;
-    let mut oth_d = Dialouge::new(vec!["Here it is.", "Ok."], "I need to see your ticket.\nIf you have one.".to_string());
-    let mut dcb = Character::new("Henry Chianski".to_string(), & mut oth_d, 2);
-    loop{
-    engine.wait_frame();
-    engine.clear_screen();
-    
-    draw_platform(engine, frame, screen_height/2 );
-    top_down_tracks(engine, 0,0,0,screen_width, screen_height /2 - 8);
-    if in_diag{
-        in_diag = dcb.talk_to(engine, frame);
-    }else{
-
-    engine.fill_rect(padding_x, padding_y , screen_width - padding_x, screen_height - padding_y, pixel::pxl_bg(' ', Color::Black));
-    engine.rect_border(padding_x, padding_y , screen_width - padding_x, screen_height - padding_y, BorderStyle::new_simple());
-
-    let standard_font = FIGfont::standard().unwrap();
-    let figure = standard_font.convert("AMTRAK").unwrap();
-    //assert!(figure.is_some());
-    let print_str = &format!("{}",figure);
-    engine.print(padding_x +1, padding_y +1,&print_str);
-    engine.line(padding_x + 1, padding_y + 6, screen_width- padding_x - 60, padding_y + 6, pixel::pxl('='));
-    engine.line(screen_width - padding_x - 60, padding_y + 1, screen_width - padding_x - 60, screen_height - padding_y -1, pixel::pxl('#'));
-    barcode(engine, (screen_width - padding_x - 80, padding_y + 6, screen_width - padding_x - 64, screen_height- padding_y - 6));
-    engine.print_fbg(padding_x + 4, padding_y + 11, "Departing Station", Color::DarkGrey, Color::Black);
-    engine.print(padding_x + 4, padding_y + 12, "Tukwilla");
-    engine.print_fbg(padding_x + 24, padding_y + 11, "Departure Time", Color::DarkGrey, Color::Black);
-    engine.print(padding_x + 24, padding_y + 12, "10:40 PM");
-    engine.print_fbg(padding_x + 4, padding_y + 15, "Arriving Station", Color::DarkGrey, Color::Black);
-    engine.print(padding_x + 4, padding_y + 16, "Tacoma");
-    engine.print_fbg(padding_x + 24, padding_y + 15, "Arrival Time", Color::DarkGrey, Color::Black);
-    engine.print(padding_x + 24, padding_y + 16, "11:27 PM");
-    engine.print_fbg(padding_x + 4, padding_y + 18, "CARRIER/TRAIN", Color::DarkGrey, Color::Black);
-    engine.print(padding_x + 4, padding_y + 19, "2V/C82");
-
-    if first_name.len()> 0{
-    let contessa = FIGfont::from_file("../contessa.flf").unwrap();
-    let figure = contessa.convert(&first_name).unwrap();
-    //assert!(figure.is_some());
-    let print_str = &format!("{}",figure);
-    engine.print(padding_x +1 , padding_y + 7,&print_str);
-
-    }
-
-
-    //STUB
-    engine.print_fbg(screen_width - padding_x - 58, padding_y + 10, &format!("Passenger Name: {} ", ""), Color::DarkGrey, Color::Black);
-    
-    
-
-    engine.print_fbg(screen_width - padding_x - 58 + 15, padding_y + 10, &first_name, Color::White, Color::Black);
-    if frame% 4 == 0{
-        engine.print_fbg(screen_width - padding_x - 58 + 15 + first_name.len() as i32, padding_y + 10, "_", Color::DarkGrey, Color::DarkGrey);
-
-    }
-    //let contessa = FIGfont::standard().unwrap();
-    //let figure = contessa.convert("TUK > TAC").unwrap();
-    //assert!(figure.is_some());
-    let print_str = &format!("{}",figure);
-    engine.print_fbg(screen_width - padding_x - 58, padding_y + 12, &format!("Iteniary {} ", ""), Color::DarkGrey, Color::Black);
-    engine.print_fbg(screen_width - padding_x - 58 +10, padding_y + 12, " TUK > TAC", Color::White, Color::Black);
-    
-    engine.print(screen_width - padding_x - 40, padding_y + 10, "",);
-
-
-    if engine.is_key_pressed(KeyCode::Enter ){
-        confirm(engine, first_name.clone());
-        break;
-    }
-    if engine.is_key_pressed(KeyCode::Backspace) && first_name.len() > 0{
-        first_name = first_name.chars().take(first_name.len() -1).collect();
-    }
-    let charr  = get_text(engine);
-    if charr.is_some(){
-        let mut new_str = format!("{}{}", first_name, charr.unwrap());
-        first_name = new_str.clone().to_owned();
-
-    }
-    }
-    engine.draw();
-    frame +=1;
-    }
-    return Game::new(first_name);
-
 }
