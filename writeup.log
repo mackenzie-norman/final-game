@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (MiKTeX 24.4) (preloaded format=pdflatex 2024.10.1)  4 JUN 2025 00:40
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (MiKTeX 24.4) (preloaded format=pdflatex 2024.10.1)  4 JUN 2025 00:45
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -195,7 +195,7 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 \pydata@fh@0=\write4
 \openout4 = `_A537DBFD7610AE3EA801362D6467536B.data.minted'.
 
-runsystem(latexminted config  --timestamp 20250604004050 A537DBFD7610AE3EA801362D6467536B)...disabled (restricted).
+runsystem(latexminted config  --timestamp 20250604004536 A537DBFD7610AE3EA801362D6467536B)...disabled (restricted).
 
 
 
@@ -253,7 +253,7 @@ Here is how much of TeX's memory you used:
  1141 hyphenation exceptions out of 8191
  85i,6n,93p,680b,293s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/maxno/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/maxno/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/maxno/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr17.pfb><C:/Users/maxno/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
-Output written on writeup.pdf (1 page, 55288 bytes).
+Output written on writeup.pdf (1 page, 55283 bytes).
 PDF statistics:
  26 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
