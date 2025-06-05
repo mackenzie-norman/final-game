@@ -1,6 +1,8 @@
 use std::fmt::format;
 use std::io;
 use std::sync::mpsc::RecvTimeoutError;
+use std::thread::Thread;
+use rand::rngs::ThreadRng;
 use rand::{random, Rng, rngs::StdRng, SeedableRng};
 use console_engine::pixel::{self, Pixel};
 use console_engine::rect_style::BorderStyle;
@@ -11,8 +13,8 @@ use figlet_rs::FIGfont;
 use crate::dialouge::{Dialouge, pt_in_box};
 use crate::{character, pumpkin};
 use character::Character;
-use crate::debug_engine;
-use crate::pumpkin::{Melon, Puddle, Pumpkin};
+
+use crate::pumpkin::{Melon, Puddle, Pumpkin, Weed};
 use crate::game::HandOptions::{Clicker,Water, PumpkinSeeds, MelonSeeds};
 use crate::scenes::{draw_mountains, planting_view, rain};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,13 +36,17 @@ pub struct Game{
     water : i32,
     pub puddles : Vec<Puddle>,
     time:i32,
+    pub weeds: Vec<Weed>,
+    rng: ThreadRng
 }
 impl Game{
     pub fn new() -> Self{
-        
-        return  Game{hunger :100, pumpkins: vec![], melons : vec![], in_hand: Clicker, p_seeds:10, m_seeds:2, topview:true, water : 4, puddles: vec![], time:0};
+        let mut rng = rand::rng();
+        return  Game{hunger :100, pumpkins: vec![], melons : vec![], in_hand: Clicker, p_seeds:10, m_seeds:2, topview:true, water : 4, puddles: vec![], time:0, weeds: vec![], rng:rng};
     }
     pub fn run(&mut self, engine: &mut ConsoleEngine ,){
+        let screen_height = engine.get_height() as i32;
+        let screen_width = engine.get_width() as i32; 
         if self.topview{
             self.menu(engine);
         }else{
@@ -55,6 +61,9 @@ impl Game{
             for melon in &mut self.melons {
                 melon.water(1);
             }
+        }
+        if self.rng.random_bool(0.01){
+            self.weeds.push(Weed::new(self.rng.random_range(0..screen_width),self.rng.random_range(0..screen_height)));
         }
     }
     pub fn menu(&mut self, engine: &mut ConsoleEngine) {
@@ -113,7 +122,7 @@ impl Game{
             engine.fill_circle(cx, cy, 2, pumpkin_color); // pumpkin body
             engine.set_pxl(cx, cy , stem_color); // stem
             
-            engine.print(x1 + 1, y2 - 1, &format!("Seeds: {}", self.p_seeds));
+            engine.print(x1 + 1, y2 - 1, &format!("Seeds:{}", self.p_seeds));
         }
         3 => {
             // Melon seeds + icon
@@ -125,9 +134,12 @@ impl Game{
             engine.fill_circle(cx, cy, 2, pumpkin_color); // pumpkin body
             engine.set_pxl(cx, cy , stem_color); // stem
             
-            engine.print(x1 + 1, y2 - 1, &format!("Seeds: {}", self.m_seeds));
+            engine.print(x1 + 1, y2 - 1, &format!("Seeds:{}", self.m_seeds));
         }
-        _ => {}
+        _ => {
+            engine.print(x1 + 1, y2 - 2, &format!("Bird"));
+            engine.print(x1 + 1, y2 - 1, &format!("Mode"));
+        }
     }
 
         menu_bounds.push((x1, x2, y1, y2));
@@ -163,21 +175,26 @@ impl Game{
      
     for pumpkin in &mut self.pumpkins {
         pumpkin.draw(engine);
-        pumpkin.grow();
+        pumpkin.grow(&mut self.rng);
     }
 
     for melon in &mut self.melons {
         melon.draw(engine);
-        melon.grow();
+        melon.grow(&mut self.rng);
 
     }
     for puddle in &mut self.puddles {
         puddle.draw(engine);
     }
+    for weed in &mut self.weeds{
+        weed.draw(engine);
+        weed.grow(& mut self.rng);
+    }
     }
     pub fn is_tile_occupied(&self, x: i32, y: i32) -> bool {
         self.pumpkins.iter().any(|p| p.contains_coords(x, y)) ||
-        self.melons.iter().any(|m| m.contains_coords(x, y))
+        self.melons.iter().any(|m| m.contains_coords(x, y)) ||
+        self.weeds.iter().any(|m| m.contains_coords(x, y))
     }   
     pub fn try_plant(&mut self, x: i32, y: i32) {
         if self.is_tile_occupied(x, y) {
@@ -235,8 +252,7 @@ pub fn try_harvest(&mut self, x: i32, y: i32) {
     }
     
     if let Some(index) = self.pumpkins.iter().position(|p| p.contains_coords(x, y) && p.is_ready()) {
-        let mut rng = rand::rng();
-        let seeds_gained = rng.random_range(1..=3);
+        let seeds_gained = self.rng.random_range(1..=3);
         self.p_seeds += seeds_gained;
         self.pumpkins.remove(index);
         
@@ -245,13 +261,17 @@ pub fn try_harvest(&mut self, x: i32, y: i32) {
     }
 
     if let Some(index) = self.melons.iter().position(|m| m.contains_coords(x, y) && m.is_ready()) { 
-        let mut rng = rand::rng();
-        let seeds_gained = rng.random_range(1..=3);
+        let seeds_gained = self.rng.random_range(1..=3);
         self.m_seeds += seeds_gained;
         self.melons.remove(index);
         self.hunger = self.hunger  + 20;
         return;
     }
+    if let Some(index) = self.weeds.iter().position(|m| m.contains_coords(x, y)) {  
+        self.weeds.remove(index);
+        return;
+    }
+
 }
 
 pub fn draw_landscape(&mut self, engine: &mut ConsoleEngine){
@@ -305,12 +325,16 @@ pub fn draw_landscape(&mut self, engine: &mut ConsoleEngine){
 
     for pumpkin in &mut self.pumpkins {
         pumpkin.draw_at(engine, pumpkin.x, map_y(pumpkin.y));
-        pumpkin.grow();
+        pumpkin.grow(&mut self.rng);
     }
 
     for melon in &mut self.melons {
         melon.draw_at(engine, melon.x, map_y(melon.y));
-        melon.grow();
+        melon.grow(&mut self.rng);
+    }
+    for weed in &mut self.weeds{
+        weed.draw_at(engine, weed.x, map_y(weed.y));
+        weed.grow(& mut self.rng);
     }
 }
 pub fn add_time(&mut self, toadd:i32){

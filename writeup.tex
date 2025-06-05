@@ -1,11 +1,49 @@
 \documentclass{article}
-\usepackage{minted}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
 
 \title{The life and times of Michael K.}
 \author{Mackenzie Norman}
 \begin{document}
 \maketitle
+\begin{center}
+    \includegraphics[width=\textwidth]{title_screen.png}
+\end{center}
+\section*{Instructions}
+The goal of the game (if you could call it that) is to garden. You begin the game with 10 pumpkin seeds and 2 Melon seeds.
+
+
+
+\section*{Why}
 This game came to me as I was writing my keyword project. I think the life and times of Michael K. is one of the more transformative books I have had the privilege of reading. I felt the same way as when I read The Vegetarian (which is very high praise).
-K. wants solely to be a gardener so I thought it would be kind to make a game in which you can do that. I think Michael's hunger is one of the more interesting part of the story and so I struggled to add it to the game. Initially I added a variable \mintinline{rust}|hunger| so that the game could track the hunger of Michael, and this is how you would lose (death being loss). But as I went on, I thought about how Michael did not seem to get hungry when he was gardening ``No man can survive on just pumpkins'' but Michael does.
-I think this Coetzee's response (?) to ideal of the ethical indian, K. takes the role of a machine, no longer human, simply waiting for his time to harvest. 
+K. wants solely to be a gardener so I thought it would be interesting to make a game in which you can do that. I think Michael's hunger is one of the more interesting part of the story and so I struggled to add it to the game. Initially I added a variable \lstinline[language=c]|hunger| so that the game could track the hunger of Michael, and this is how you would lose (death being loss). But as I went on, I thought about how Michael did not seem to get hungry when he was gardening ``Am I to believe that you lived for a year on pumpkin? The human body is not capable of that, Michaels.'' 
+I think this is Coetzee's `response' to idea of K. being this ``ethical indian''. By not succumbing to hunger while gardening K. takes the role of a machine, akin to a combine, no longer fully human, simply waiting for his time to harvest. 
+I wanted my game to be peaceful and possible to played idly (or even by doing nothing), which is why I added weeds. If you sit long enough the farm will be completely taken over by weeds. The choice as the player is how you want to labor; should you water your crops all the time, you can easily spend all your time watering (this is why I switched the water to being something you fill up), or all your time fighting weeds, or you can plant your seeds and sit passively, waiting for what you planted to be ready to harvest.
+
 \end{document}
