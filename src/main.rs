@@ -25,7 +25,7 @@ fn main() {
   
     Pumpkin::new(0, 1);
     let mut game = Game::new(); 
-    let mut engine = console_engine::ConsoleEngine::init_fill(20).unwrap(); 
+    let mut engine = console_engine::ConsoleEngine::init_fill(10).unwrap(); 
     let screen_width = engine.get_width() as i32;
     let puddle_a = Puddle::new(screen_width, 5);
     let puddle_b = Puddle::new(screen_width - 2, 0);
@@ -35,7 +35,7 @@ fn main() {
 
     let mut puddles = vec![puddle_a, puddle_b, puddle_c, puddle_d];
     game.puddles = puddles;
-    let rocks = rock_array(&mut engine, 20);
+    
     let mut frame = 0;
     loop{
         engine.wait_frame();
@@ -45,8 +45,9 @@ fn main() {
             break;
         }
         //draw_mountains(&mut engine, frame, true, &rocks);
-        planting_view(&mut engine);
+        //planting_view(&mut engine);
         game.run(&mut engine);
+        game.add_time(1);
         engine.draw();
         frame += 1;
     }

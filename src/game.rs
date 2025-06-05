@@ -14,7 +14,7 @@ use character::Character;
 use crate::debug_engine;
 use crate::pumpkin::{Melon, Puddle, Pumpkin};
 use crate::game::HandOptions::{Clicker,Water, PumpkinSeeds, MelonSeeds};
-use crate::scenes::{draw_mountains};
+use crate::scenes::{draw_mountains, planting_view, rain};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 
 pub enum HandOptions {
@@ -32,23 +32,35 @@ pub struct Game{
     in_hand: HandOptions,
     topview : bool,
     water : i32,
-    pub puddles : Vec<Puddle>
+    pub puddles : Vec<Puddle>,
+    time:i32,
 }
 impl Game{
     pub fn new() -> Self{
         
-        return  Game{hunger :100, pumpkins: vec![], melons : vec![], in_hand: Clicker, p_seeds:10, m_seeds:2, topview:true, water : 4, puddles: vec![]};
+        return  Game{hunger :100, pumpkins: vec![], melons : vec![], in_hand: Clicker, p_seeds:10, m_seeds:2, topview:true, water : 4, puddles: vec![], time:0};
     }
-    pub fn run(&mut self, engine: &mut ConsoleEngine){
+    pub fn run(&mut self, engine: &mut ConsoleEngine ,){
         if self.topview{
             self.menu(engine);
         }else{
-            self.draw_landscape(engine,0);
+            self.draw_landscape(engine);
+        }
+        if self.time > 400 && self.time < 800{
+            rain(engine, self.time );
+            for pumpkin in &mut self.pumpkins {
+                pumpkin.water(1);
+            }
+
+            for melon in &mut self.melons {
+                melon.water(1);
+            }
         }
     }
     pub fn menu(&mut self, engine: &mut ConsoleEngine) {
     let screen_height = engine.get_height() as i32;
     
+    planting_view(engine);
     let box_size = screen_height / 8;
 
     let mut menu_bounds = Vec::new();
@@ -129,7 +141,7 @@ impl Game{
 
         for (i, (x1, x2, y1, y2)) in menu_bounds.iter().enumerate() {
             if mx >= *x1 && mx <= *x2 && my >= *y1 && my <= *y2 {
-                if i  == 0 {self.topview = !self.topview};
+                if i  == 4 {self.topview = !self.topview};
                 self.in_hand = match i {
                     0 => HandOptions::Clicker,
                     1 => HandOptions::Water,
@@ -222,7 +234,7 @@ pub fn try_harvest(&mut self, x: i32, y: i32) {
         return;
     }
     
-    if let Some(index) = self.pumpkins.iter().position(|p| p.contains_coords(x, y) && p.growth_stage >= 60) {
+    if let Some(index) = self.pumpkins.iter().position(|p| p.contains_coords(x, y) && p.is_ready()) {
         let mut rng = rand::rng();
         let seeds_gained = rng.random_range(1..=3);
         self.p_seeds += seeds_gained;
@@ -232,7 +244,7 @@ pub fn try_harvest(&mut self, x: i32, y: i32) {
         return;
     }
 
-    if let Some(index) = self.melons.iter().position(|m| m.contains_coords(x, y) && m.growth_stage >= 60) { 
+    if let Some(index) = self.melons.iter().position(|m| m.contains_coords(x, y) && m.is_ready()) { 
         let mut rng = rand::rng();
         let seeds_gained = rng.random_range(1..=3);
         self.m_seeds += seeds_gained;
@@ -242,9 +254,9 @@ pub fn try_harvest(&mut self, x: i32, y: i32) {
     }
 }
 
-pub fn draw_landscape(&mut self, engine: &mut ConsoleEngine, land_y1:i32){
+pub fn draw_landscape(&mut self, engine: &mut ConsoleEngine){
 
-    draw_mountains(engine, 0, true, &vec![]);
+    draw_mountains(engine, 0, self.time < 600,);
     let screen_width = engine.get_width() as i32;
     let screen_height = engine.get_height() as i32;
 
@@ -269,10 +281,10 @@ pub fn draw_landscape(&mut self, engine: &mut ConsoleEngine, land_y1:i32){
     engine.fill_rect(arrow_width, arrow_height - 2, arrow_width * 2 , 3, arrow_color);
 
     // Bounding box for click detection
-    let min_x = bx.min(cx).min(ax);
-    let max_x = bx.max(cx).max(ax);
-    let min_y = ay.min(by).min(cy);
-    let max_y = ay.max(by).max(cy);
+    let min_x = 1;
+    let max_x = arrow_width * 2;
+    let min_y = 1;
+    let max_y = arrow_height;
 
     if let Some((mx, my)) = engine.get_mouse_press(MouseButton::Left) {
         let mx = mx as i32;
@@ -284,21 +296,26 @@ pub fn draw_landscape(&mut self, engine: &mut ConsoleEngine, land_y1:i32){
     }
     //loop through and draw pumpkins and melons from screen height to soil line using draw_at function and converting their y value to within the range
     let soil_line = screen_height / 2 + screen_height/4;
+    let ground_bottom = screen_height;
      // Convert world Y (0–100) to screen Y
     let map_y = |y: i32| -> i32 {
         let y_clamped = y.clamp(0, 100);
         ground_bottom - ((y_clamped * (ground_bottom - soil_line)) / 100)
     };
 
-    for pumpkin in &self.pumpkins {
-        pumpkin.draw_at(engine, map_y(pumpkin.y));
+    for pumpkin in &mut self.pumpkins {
+        pumpkin.draw_at(engine, pumpkin.x, map_y(pumpkin.y));
+        pumpkin.grow();
     }
 
-    for melon in &self.melons {
-        melon.draw_at(engine, map_y(melon.y));
+    for melon in &mut self.melons {
+        melon.draw_at(engine, melon.x, map_y(melon.y));
+        melon.grow();
     }
 }
-
+pub fn add_time(&mut self, toadd:i32){
+    self.time = (self.time + toadd) % 1200
+}
 
     
 }

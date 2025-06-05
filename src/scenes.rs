@@ -6,9 +6,12 @@ use console_engine::{screen, Color, MouseButton};
 use console_engine::ConsoleEngine;
 use console_engine::KeyCode;
 use figlet_rs::FIGfont;
-use rand::Rng;
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 
-pub fn draw_mountains(engine: &mut ConsoleEngine, frame:i32, day:bool, rocks: &Vec<(i32,i32,i32)> ){
+use crate::smart_drawing::smart_set_pxl;
+
+pub fn draw_mountains(engine: &mut ConsoleEngine, frame:i32, day:bool,  ){
     let screen_height = engine.get_height() as i32;
     let screen_width = engine.get_width() as i32; 
     let skyline = screen_height/4 + screen_height/6;
@@ -17,6 +20,11 @@ pub fn draw_mountains(engine: &mut ConsoleEngine, frame:i32, day:bool, rocks: &V
     if day{
 
         sky = pixel::pxl_bg(' ', Color::AnsiValue(81));
+        engine.fill_rect(0, 0, screen_width, skyline, sky);
+    }
+    else {
+        engine.fill_rect(0, 0, screen_width, skyline, sky);
+        night_sky(engine, frame, (0, 0, screen_width, skyline), 0.3, Color::AnsiValue(236));
     }
         
 
@@ -26,13 +34,13 @@ pub fn draw_mountains(engine: &mut ConsoleEngine, frame:i32, day:bool, rocks: &V
     let hill_color_d = Color::AnsiValue(144);
     let hill_color_e = Color::AnsiValue(151);
     
-    let hill_px_1 = pixel::pxl_fg('#', hill_color_a);
+    let hill_px_1 = pixel::pxl_bg(' ', hill_color_a);
     let hill_px_2 = pixel::pxl_fg('#', hill_color_b);
     let hill_px_3 = pixel::pxl_fg('#', hill_color_c);
     let hill_px_4 = pixel::pxl_fg('#', hill_color_d);
     let hill_px_5 = pixel::pxl_fg('#', hill_color_e);
     engine.fill_rect(0, screen_height, screen_width, skyline, hill_px_1);
-    engine.fill_rect(0, 0, screen_width, skyline, sky);
+    
     //boob 1
     engine.fill_circle(screen_width, screen_height + screen_width/4 + 2, (screen_width/2).try_into().unwrap(), hill_px_2);
     engine.fill_circle(screen_width +2, screen_height + screen_width/4 + 2, (screen_width/2).try_into().unwrap(), hill_px_4);
@@ -42,13 +50,7 @@ pub fn draw_mountains(engine: &mut ConsoleEngine, frame:i32, day:bool, rocks: &V
     engine.fill_circle(screen_width/4, screen_height + screen_width/4 + 2, (screen_width/2).try_into().unwrap(), hill_px_2);
     engine.fill_rect(0, screen_height, screen_width, soil_line  , hill_px_1);
     damn(engine,  screen_width/2 + screen_width/8  , soil_line , screen_width - screen_width/4, soil_line  + 3);
-    //draw sky last
-    for rck in rocks{
-        let mut rng = rand::rng();
-        let height = rck.2;
-        let y = rck.1;
-        rock(engine, frame, rck.0 ,  y, 1, y + height);
-    }
+    
     
 }
 fn damn(engine: &mut ConsoleEngine, x1: i32,y1:i32, x2: i32,y2:i32){
@@ -77,21 +79,74 @@ pub fn rock_array(engine: &mut ConsoleEngine, count: i32) -> Vec<(i32,i32,i32)>{
 
 
 }
+fn title(engine: &mut ConsoleEngine, frame:i32){
+    let orig_message = "The Life & Times of Micheal K.";
+    let hold_message: String = orig_message.chars().take(frame as usize).collect();
+    let my_message = &hold_message;
+    let  width:i32 = (engine.get_width()).try_into().unwrap();
+    let standard_font = FIGfont::standard().unwrap();
+    let figure = standard_font.convert(my_message).unwrap();
+    //assert!(figure.is_some());
+    let print_str = &format!("{}",figure);
+    //engine.print((width/2) - (print_str.len().try_into().unwrap_or(0)),0,&print_str );
+    let text_width: i32  = my_message.len().try_into().unwrap();
+    let start_x = (width/2) - text_width *3;
+    let start_y = 4;
+    let padding = 0;
+    engine.fill_rect( start_x - padding, start_y - padding , start_x + text_width  + padding, start_y + figure.height as i32 + padding, pixel::pxl_bg(' ', Color::Black));
+    engine.print(start_x,start_y,&print_str );
+    if frame > orig_message.len() as i32 && frame %4 != 0{
 
+        engine.print(width/2 - 12, start_y + 24 + figure.height as i32, "Press Space to start");
+    }
+}
+fn night_sky(engine: &mut ConsoleEngine, frame:i32, skybox: (i32,i32,i32,i32), density: f64, bg:Color){
+    let mut rng = StdRng::seed_from_u64(2);
+    let stars = vec!['x', '.' , '+', 'o'];
+    let star_colors = vec![Color::AnsiValue(241), Color::AnsiValue(248), Color::AnsiValue(245)];
+    for x in skybox.0..skybox.2{
+        for y in skybox.1..skybox.3{
+            //
+            //engine.set_pxl(x + frame, y, pixel::pxl_fg(stars[0], Color::DarkYellow) );
+            if rng.random_bool(density){
+                engine.set_pxl(x + frame, y, pixel::pxl_fbg(stars[rng.random_range(0..stars.len() )], star_colors[rng.random_range(0..star_colors.len() )] ,bg));
+            }
+        }
+    }
+
+}
 pub fn planting_view(engine: &mut ConsoleEngine){
     let screen_height = engine.get_height() as i32;
     let screen_width = engine.get_width() as i32;
     
     let hill_color_a = Color::AnsiValue(94);
-    let hill_color_b = Color::AnsiValue(100);
+    let hill_color_b = Color::AnsiValue(130);
     let hill_color_c = Color::AnsiValue(143);
     let hill_color_d = Color::AnsiValue(144);
     let hill_color_e = Color::AnsiValue(151);
     
-    let hill_px_1 = pixel::pxl_fg('#', hill_color_a);
-    let hill_px_2 = pixel::pxl_fg('#', hill_color_b);
+    let hill_px_1 = pixel::pxl_fbg('#', hill_color_a, hill_color_a);
+    let hill_px_2 = pixel::pxl_fbg('#', hill_color_b,hill_color_a );
     let hill_px_3 = pixel::pxl_fg('#', hill_color_c);
     let hill_px_4 = pixel::pxl_fg('#', hill_color_d);
     let hill_px_5 = pixel::pxl_fg('#', hill_color_e);
     engine.fill_rect(0, screen_height, screen_width, 0  , hill_px_1);
+    engine.fill_circle(screen_width, screen_height, (screen_height/2).try_into().unwrap(), hill_px_2);
+}
+
+pub fn rain(engine: &mut ConsoleEngine, time:i32){
+    let screen_height = engine.get_height() as i32;
+    let screen_width = engine.get_width() as i32;
+    let skybox = (0,0,screen_width,screen_height);
+    let mut rng = StdRng::seed_from_u64(2);
+
+    for x in skybox.0..skybox.2{
+        for y in skybox.1..skybox.3{
+            //
+            //engine.set_pxl(x + frame, y, pixel::pxl_fg(stars[0], Color::DarkYellow) );
+            if rng.random_bool(0.03){
+                smart_set_pxl(engine, x, (y + time) % screen_height , pixel::pxl_fg('.', Color::DarkBlue));
+            }
+        }
+    }
 }
