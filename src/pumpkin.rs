@@ -19,7 +19,7 @@ impl Pumpkin{
     }
     pub fn grow(&mut self, rng: &mut ThreadRng){
         
-        if rng.random_bool((self.water_lvl) as f64/100.0){
+        if rng.random_bool((self.water_lvl).max(1) as f64/100.0){
             self.growth_stage += 1;
         }
         if self.water_lvl > 1 && rng.random_bool(0.09){
@@ -131,7 +131,7 @@ impl Melon{
     }
     pub fn grow(&mut self, rng: &mut ThreadRng){
         
-        if rng.random_bool((self.water_lvl.min(1)) as f64/100.0){
+        if rng.random_bool((self.water_lvl.max(1)) as f64/100.0){
             self.growth_stage += 1;
         }
         if self.water_lvl > 1 && rng.random_bool(0.09){
