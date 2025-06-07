@@ -77,6 +77,8 @@ To leave this mode, \textbf{click the large green arrow in the upper left}
 
 
 
+\section*{Quick Technical Notes }
+This was written using the Rust programming language with use of the console-game-engine package. It also uses the smart pixel filling library I added to this engine, this supports ray-tracing esque coloring.
 
 
 \section*{Why}
@@ -87,7 +89,11 @@ I wanted my game to be peaceful and possible to played idly (or even by doing no
 
 Additionally the game supports the idea of the land being something that you have control over, ``The first thing is the land'' So with this game, you are able to control the land as you see fit. 
 
-I also included the birds eye view to support Michaels dream of ``I used to think about flying. I always wanted to fly. I used to stretch out my arms and think I was flying over the fences and between the houses. I flew low over people's heads, but they couldn't see me.'' This was one of my favorite themes of the book. Especially the idea the doctor has where Michael is not eating so that he can ``grow more and more insubstantial till you are all soul and can fly away''
+I also included the birds eye view to support Michaels dream of ``I used to think about flying. I always wanted to fly. I used to stretch out my arms and think I was flying over the fences and between the houses. I flew low over people's heads, but they couldn't see me.'' This was one of my favorite themes of the book. Especially the idea the doctor has where Michael is not eating so that he can ``grow more and more insubstantial till you are all soul and can fly away'' 
+
+Other questions that came to me was one of camps, if I had more time I might have added a system of camps to the game, and my initial idea was too have this, but as I started working and the game progressed into more of Michael's dream than his reality I realized that camps would take away from the dream I was trying to cultivate. 
+
+Another intentional/unintentional feature I added is that I used an unsigned integer to track the `growth' of the crops. Since unsigned integers have a maximum size before they ``roll over'' (its confusing) it means that if you let your plants sit ripe long enough they will return to their juvenile stage. 
 
 
 
