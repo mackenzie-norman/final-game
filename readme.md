@@ -1,1 +1,1 @@
-![A demo of the game](gamedemo.mp4)
+https://youtu.be/MlMOhrKCtvw
