@@ -3,6 +3,7 @@
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{float}
+\usepackage{hyperref}
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
@@ -37,8 +38,34 @@
     \includegraphics[width=\textwidth]{title_screen.png}
 \end{center}
 \section*{Instructions}
-This game is designed in the style of other command line based games, and as such the graphics may not be beuatiful, (although I they do require some creativity to get right). This means to run it you will need to access your command line.
+This game is designed in the style of other command line based games, and as such the graphics may not be beautiful, (although I they do require some creativity to get right). This means to run the program (properly) it you will need to access your command line.
+If you struggle to run it you can also view the video I uploaded:  \url{https://youtu.be/MlMOhrKCtvw}
+\paragraph{}
 
+\subsection*{Installing}
+Both versions (Mac \& Windows) have to downloaded from \url{https://github.com/mackenzie-norman/final-game/releases}
+\subsubsection*{Mac}
+I do not have a Mac so I have to rely in part of the kindness of my friend who compiled it for me but you will need to first open terminal \url{}
+
+\subsubsection*{Windows}
+This I can actually speak on. After downloading the file final-game.exe, go to your \textbf{Downloads} folder in explorer and click on the top and type ``\textbf{cmd}'' and press enter. 
+\begin{figure}[H]
+    \includegraphics[width=\textwidth]{open-command-line.png}
+    \caption{Opening the command line in windows}
+        
+\end{figure}
+
+This should open the command line, expand it to full screen and type ``\textbf{.final-game.exe}'' and press enter. 
+\begin{figure}[H]
+    \includegraphics[width=\textwidth]{fspic.png}
+    \caption{A full screen command line with correct file entered}
+        
+\end{figure}
+
+Windows might try to block it since it is unsigned but you should be able to open it up by clicking around it.
+
+
+\subsection*{Gameplay}
 The goal of the game (if you could call it that) is to garden. You begin the game with 10 pumpkin seeds and 2 Melon seeds.
 
 Which can be planted by first \textbf{selecting them from the menu on the left} and then \textbf{clicking anywhere on the screen}
@@ -93,7 +120,9 @@ I also included the birds eye view to support Michaels dream of ``I used to thin
 
 Other questions that came to me was one of camps, if I had more time I might have added a system of camps to the game, and my initial idea was too have this, but as I started working and the game progressed into more of Michael's dream than his reality I realized that camps would take away from the dream I was trying to cultivate. 
 
-Another intentional/unintentional feature I added is that I used an unsigned integer to track the `growth' of the crops. Since unsigned integers have a maximum size before they ``roll over'' (its confusing) it means that if you let your plants sit ripe long enough they will return to their juvenile stage. 
+Another feature I `added' is that I used an unsigned integer to track the `growth' of the crops. Since unsigned integers have a maximum size before they ``roll over'' (its confusing) it means that if you let your plants sit ripe long enough they will return to their juvenile stage. While this was unintentional to start I realized this was apt, since it can be argued that Michael is constantly flitting between being an adult and being a child.
+
+I also used the terminal as the medium for my game because I thought it was interesting to contrast work with gardening. The terminal is where computer scientists do most of our work from, and so it is fitting to make a game where no work exists in a place that is used only for work. 
 
 
 
